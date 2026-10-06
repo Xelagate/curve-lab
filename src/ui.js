@@ -192,6 +192,9 @@ async function showPool() {
   const p = await chain.readPool(created.pool)
   log(`Progress to graduation ${(p.progress * 100).toFixed(2)}% · reserve ${sol(p.quoteReserve / 1e9)} SOL · ` +
     `fees so far: partner ${sol(p.partnerFeeSol, 6)} SOL, creator ${sol(p.creatorFeeSol, 6)} SOL`)
+  if (p.progress >= 1 && !p.isMigrated)
+    log(`Graduated. Migrate it to DAMM v2 on ${a('migrator.meteora.ag', 'https://migrator.meteora.ag')} (choose Devnet), using pool ${created.pool}.`)
+  if (p.isMigrated) log('Migrated to DAMM v2.')
 }
 
 $('connect').onclick = busy(async () => {
