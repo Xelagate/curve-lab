@@ -4,62 +4,201 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Curve Lab</title>
+<link rel="icon" href="./public/favicon.svg" type="image/svg+xml">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://api.devnet.solana.com wss://api.devnet.solana.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'">
 <style>
-  :root { --bg: #fbfaf7; --fg: #1c1b19; --muted: #6b675f; --line: #dcd8cf; --accent: #6b3fd4; --bad: #b42318; --card: #fff; }
-  @media (prefers-color-scheme: dark) { :root { --bg: #141312; --fg: #ece9e3; --muted: #a39e94; --line: #3a3732; --accent: #a98bff; --bad: #ff7a6b; --card: #1d1c1a; } }
+  @font-face { font-family: 'Montserrat'; src: url('./public/fonts/montserrat-latin-wght.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; }
+  :root { color-scheme: dark;
+    --bg: #171723; --panel: #242433; --deep: #13131b; --line: #33334b; --fg: #d2d2ff; --head: #fff; --muted: #a7a7ca; --dim: #58587b;
+    --violet: #6a56e4; --violet-hi: #8a7bf0; --orange: #f54b00; --gold: #fdbf1c; --bad: #ff6b6b;
+    --mono: ui-monospace, SFMono-Regular, Menlo, monospace; --ease-out: cubic-bezier(0.23, 1, 0.32, 1); }
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
-  header, main { max-width: 1180px; margin: 0 auto; padding: 16px; }
-  h1 { margin: 0; font-size: 22px; } h2 { font-size: 15px; margin: 0 0 8px; }
-  .sub { color: var(--muted); margin: 4px 0 0; }
-  main { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  main > * { min-width: 0; }
-  fieldset { min-inline-size: 0; border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px 12px; background: var(--card); }
-  legend { font-weight: 600; padding: 0 4px; }
-  label { display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center; margin: 6px 0; font-size: 14px; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 500 15px/1.5 Montserrat, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
   [hidden] { display: none !important; }
-  #chart-curve, #chart-fee { overflow-x: auto; } #chart-curve svg, #chart-fee svg { min-width: 600px; }
+  a { color: var(--violet-hi); }
+  h1, h2 { color: var(--head); letter-spacing: .02em; }
+  h2 { font-size: 16px; font-weight: 700; margin: 0 0 14px; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  :focus-visible { outline: 2px solid var(--violet-hi); outline-offset: 2px; }
+
+  /* Header */
+  header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-top: 22px; padding-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand svg { width: 36px; height: 36px; flex: none; }
+  h1 { margin: 0; font-size: 26px; font-weight: 800; line-height: 1.1; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .brand .by { color: var(--fg); white-space: nowrap; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .wallet { padding: 7px 16px; font-size: 13px; white-space: nowrap; }
+  .wallet.on, .wallet.on:hover:not(:disabled) { background: var(--deep); border-color: var(--line); color: var(--head); font-family: var(--mono); font-size: 12px; }
+  .wallet.on::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; margin-right: 8px; vertical-align: 1px; }
+  .hint { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; border: 1px dashed var(--line); color: var(--head); font-size: 13px; font-weight: 600; }
+  .badge { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+  .badge.meteora { border-color: rgba(245, 75, 0, .5); color: #ffb08a; }
+  .badge.meteora::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); margin-right: 7px; vertical-align: 1px; }
+
+  /* Ticker strip */
+  #ticker { border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; padding: 8px 0;
+    mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .track { display: flex; width: max-content; animation: marquee 40s linear infinite; }
+  .track > div { display: flex; gap: 8px; padding-right: 8px; }
+  .chip { display: flex; gap: 12px; align-items: baseline; padding: 6px 16px; border-radius: 999px; background: var(--panel); white-space: nowrap; font-size: 13px; font-weight: 700; }
+  .chip span { color: var(--muted); font-weight: 600; } .chip b { color: var(--head); }
+  @keyframes marquee { to { transform: translateX(-50%); } }
+  #ticker:hover .track { animation-play-state: paused; }
+
+  /* Hero */
+  #hero { position: relative; padding-top: 44px; padding-bottom: 40px; isolation: isolate; }
+  #hero::before { content: ''; position: absolute; z-index: -1; inset: -40px 0 0; pointer-events: none;
+    background: radial-gradient(ellipse 55% 70% at 30% 45%, rgba(106, 86, 228, .22), transparent 70%), radial-gradient(ellipse 40% 60% at 75% 55%, rgba(245, 75, 0, .10), transparent 70%); }
+  .stats { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 24px; }
+  .stat .v { display: block; color: var(--head); font-size: clamp(36px, 5.4vw, 72px); font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+  .stat .v small { font-size: .38em; font-weight: 700; color: var(--muted); letter-spacing: .02em; margin-left: 6px; }
+  .stat .k { display: block; color: var(--muted); font-size: 14px; font-weight: 600; margin-top: 10px; }
+  .stat:first-child .v { background: linear-gradient(90deg, #fff 40%, #c9c0ff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat:first-child .v small { -webkit-text-fill-color: var(--muted); }
+  .prices { margin: 28px 0 0; font-size: 15px; color: var(--fg); }
+  .prices b { color: var(--head); }
+  .split { margin-top: 18px; }
+  .split .bar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; background: var(--panel); }
+  .split .bar i { display: block; height: 100%; }
+  .split .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+  .legend span::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: var(--c); margin-right: 7px; vertical-align: -1px; }
+  .legend b { color: var(--head); font-weight: 700; margin-left: 4px; }
+
+  /* Layout */
+  main.wrap { display: grid; grid-template-columns: minmax(300px, 420px) 1fr; gap: 24px; align-items: start; padding-bottom: 40px; }
+  main > * { min-width: 0; }
+  .card { background: var(--panel); border-radius: 16px; padding: 20px 22px; margin-bottom: 20px; }
+  #side { position: sticky; top: 16px; padding: 0; overflow: hidden; display: flex; flex-direction: column; max-height: calc(100vh - 32px); }
+  #side #form { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+  /* Tabs + form */
+  #tabs { display: flex; gap: 2px; padding: 8px; background: var(--deep); overflow-x: auto; scrollbar-width: none; }
+  .tab { position: relative; flex: none; background: none; border: 0; color: var(--muted); font: 700 13px Montserrat, system-ui, sans-serif; padding: 9px 10px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .tab:hover { color: var(--head); }
+  .tab[aria-selected="true"] { background: var(--violet); color: #fff; }
+  .tab .n { opacity: .7; margin-right: 6px; }
+  .tab.has-err::after { content: ''; position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); box-shadow: 0 0 0 2px var(--deep); }
+  #form { padding: 6px 22px 18px; }
+  fieldset { min-inline-size: 0; border: 0; margin: 0; padding: 0 0 10px; border-bottom: 1px solid var(--line); }
+  fieldset:last-child { border-bottom: 0; }
+  legend { padding: 16px 0 2px; color: var(--head); font-weight: 700; font-size: 14px; letter-spacing: .02em; }
+  label { display: grid; grid-template-columns: 1fr 144px; gap: 10px; align-items: center; margin: 8px 0; font-size: 13px; font-weight: 600; color: var(--fg); }
   label.wide { grid-template-columns: 1fr; }
-  input, select { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
-  .err { color: var(--bad); font-size: 13px; grid-column: 1 / -1; }
-  .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: var(--card); }
-  .stale { opacity: .45; }
-  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; } dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
-  svg { width: 100%; height: auto; display: block; } svg text { fill: var(--muted); font-size: 11px; }
-  svg .plot { fill: none; stroke: var(--accent); stroke-width: 2; } svg .axis { stroke: var(--line); }
+  input, select { width: 100%; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--deep); color: var(--head); font: 600 14px Montserrat, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+  input:hover, select:hover { border-color: var(--dim); }
+  input:focus, select:focus { outline: none; border-color: var(--violet); box-shadow: 0 0 0 3px rgba(106, 86, 228, .3); }
+  select { appearance: none; padding-right: 30px; cursor: pointer;
+    background: var(--deep) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a7a7ca' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 12px center; }
+  input[type="checkbox"] { width: 18px; height: 18px; justify-self: end; accent-color: var(--violet); }
+  input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; } input[type="number"] { -moz-appearance: textfield; }
+  .err { color: var(--bad); font-size: 12px; grid-column: 1 / -1; }
+  .err:empty { display: none; }
+
+  /* Results */
+  .stale { opacity: .4; transition: opacity .15s; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { fill: var(--muted); font: 600 11px Montserrat, system-ui, sans-serif; }
+  svg .grid { stroke: rgba(255, 255, 255, .06); }
+  svg .plot { fill: none; stroke: var(--violet-hi); stroke-width: 2.5; stroke-linejoin: round; }
+  svg.intro .plot { stroke-dasharray: 1; animation: draw .9s var(--ease-out) both; }
+  svg.intro .area, svg.intro .mk { animation: fade .6s var(--ease-out) .3s both; }
+  svg .ring { fill: none; stroke: var(--gold); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; pointer-events: none; }
+  svg .mark { fill: var(--head); font-weight: 700; font-size: 12px; }
+  svg .mark.gold { fill: var(--gold); }
+  @keyframes draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+  @keyframes fade { from { opacity: 0; } }
+  /* First load only (body.enter is removed by ui.js): hero, form and cards rise in with a short stagger. */
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  .enter .stat, .enter #side, .enter #results > .card { animation: rise 450ms var(--ease-out) both; }
+  .enter .stat:nth-child(2) { animation-delay: 60ms; } .enter .stat:nth-child(3) { animation-delay: 120ms; }
+  .enter #side { animation-delay: 160ms; }
+  .enter #results > .card:nth-child(1) { animation-delay: 200ms; } .enter #results > .card:nth-child(2) { animation-delay: 260ms; }
+  .enter #results > .card:nth-child(3) { animation-delay: 320ms; } .enter #results > .card:nth-child(n+4) { animation-delay: 380ms; }
+  #bot-human { margin: 14px 0 0; font-size: 14px; }
   .scroll { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; } td, th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: right; } td:first-child, th:first-child { text-align: left; }
-  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
-  button:disabled { opacity: .5; cursor: default; } button.ghost { background: none; color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; } td, th { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+  th { color: var(--muted); font-weight: 600; text-transform: capitalize; } td { color: var(--head); }
+  td:first-child, th:first-child { text-align: left; color: var(--fg); padding-left: 0; } tr:last-child td { border-bottom: 0; font-weight: 800; }
+  #revenue .split { margin: 0 0 16px; } #revenue .bar { height: 16px; }
+  button { font: 700 14px Montserrat, system-ui, sans-serif; padding: 10px 20px; border-radius: 999px; border: 1px solid var(--violet); background: var(--violet); color: #fff; cursor: pointer;
+    transition: transform 160ms var(--ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease; }
+  button:active:not(:disabled) { transform: scale(.97); }
+  button:hover:not(:disabled) { background: var(--violet-hi); border-color: var(--violet-hi); }
+  button:disabled { opacity: .4; cursor: default; }
+  button.ghost { background: none; color: var(--fg); border-color: var(--dim); }
+  button.ghost:hover:not(:disabled) { background: rgba(106, 86, 228, .15); border-color: var(--violet-hi); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; }
+  #download { display: inline-block; margin-top: 12px; font-weight: 700; }
+  pre { white-space: pre-wrap; word-break: break-all; font: 12px/1.55 var(--mono); max-height: 300px; overflow: auto; background: var(--deep); color: var(--fg); padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line); margin: 14px 0 0; }
+  pre:empty { display: none; }
+  #devlog { display: block; min-height: 64px; } #devlog:empty::before { content: '$ waiting for a wallet'; color: var(--dim); }
+  .steps { list-style: none; padding: 0; margin: 16px 0 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; counter-reset: s; }
+  .steps li { counter-increment: s; display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 12px; background: var(--deep); }
+  .steps li::before { content: counter(s); display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--violet); color: var(--head); font-weight: 700; font-size: 13px; }
+  .steps button { width: 100%; padding: 9px 10px; font-size: 13px; }
   #banner { display: none; background: var(--bad); color: #fff; padding: 10px 16px; }
   #banner.show { display: block; }
-  pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 260px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
-  a { color: var(--accent); }
+  footer { border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+  footer .wrap { padding-top: 22px; padding-bottom: 28px; }
+
+  @media (max-width: 999px) {
+    main.wrap { grid-template-columns: 1fr; }
+    #side { position: static; max-height: none; }
+    .stats { grid-template-columns: 1fr 1fr; } .stat:first-child { grid-column: 1 / -1; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 16px; }
+    #hero { padding-top: 28px; padding-bottom: 28px; }
+    .card { padding: 16px; } #form { padding: 4px 16px 14px; }
+    label { grid-template-columns: 1fr 136px; }
+    .steps { grid-template-columns: 1fr; } .wallet .opt { display: none; }
+    #revenue tr { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+    #revenue tr:first-child th:first-child { display: none; } #revenue tr:last-child { border-bottom: 0; }
+    #revenue td, #revenue th { border-bottom: 0; padding: 8px 4px 8px 0; }
+    #revenue td:first-child { grid-column: 1 / -1; padding-bottom: 0; } #revenue tr:last-child td:first-child { padding-bottom: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
 </style>
 </head>
-<body>
+<body class="enter">
 <div id="banner">Could not load the app. <button id="retry" class="ghost" style="color:#fff;border-color:#fff">Retry</button></div>
 <header>
-  <h1>Curve Lab</h1>
-  <p class="sub">Design a Meteora Dynamic Bonding Curve config, see what it does before launch, prove it on devnet, export it.</p>
+  <div class="wrap">
+    <div class="brand">
+      <svg viewBox="0 0 36 36" aria-hidden="true"><defs><linearGradient id="logo-g" x1="0" x2="1" y1="1" y2="0"><stop offset="0" stop-color="#6a56e4"/><stop offset="1" stop-color="#f54b00"/></linearGradient></defs>
+        <rect x="1" y="1" width="34" height="34" rx="10" fill="#242433"/><path d="M8 27 C16 26 22 20 28 9" fill="none" stroke="url(#logo-g)" stroke-width="3" stroke-linecap="round"/><circle cx="28" cy="9" r="3" fill="#fdbf1c"/></svg>
+      <div><h1>Curve Lab</h1><p>Meteora DBC designer · <span class="by">by PantheonX</span></p></div>
+    </div>
+    <div class="badges"><span class="badge meteora">Built on Meteora DBC</span><span class="badge">Devnet</span>
+      <button type="button" id="connect" class="wallet">Connect<span class="opt"> Wallet</span></button></div>
+  </div>
 </header>
-<main>
-  <form id="form" autocomplete="off"></form>
+<div id="ticker"></div>
+<section id="hero" class="wrap" aria-live="polite"></section>
+<main class="wrap">
+  <aside class="card" id="side">
+    <div id="tabs" role="tablist" aria-label="Config sections"></div>
+    <form id="form" autocomplete="off"></form>
+  </aside>
   <section id="results">
-    <div class="card" id="summary"></div>
     <div class="card"><h2>Market cap vs SOL raised</h2><div id="chart-curve"></div></div>
     <div class="card"><h2>Trading fee over the first seconds</h2><div id="chart-fee"></div><p id="bot-human"></p></div>
     <div class="card" id="revenue"></div>
     <div class="card" id="export">
       <h2>Export</h2>
-      <button type="button" data-export="json">Config JSON</button>
-      <button type="button" data-export="builder">Builder input</button>
-      <button type="button" data-export="invent">meteora-invent jsonc</button>
-      <button type="button" data-export="ts">TypeScript</button>
-      <button type="button" class="ghost" id="share">Copy share link</button>
-      <p><a id="download" hidden></a></p>
+      <div class="row">
+        <button type="button" data-export="invent">meteora-invent jsonc</button>
+        <button type="button" class="ghost" data-export="json">Config JSON</button>
+        <button type="button" class="ghost" data-export="builder">Builder input</button>
+        <button type="button" class="ghost" data-export="ts">TypeScript</button>
+        <button type="button" class="ghost" id="share">Copy share link</button>
+      </div>
+      <a id="download" hidden></a>
       <pre id="export-out"></pre>
     </div>
     <div class="card" id="devnet">
@@ -67,14 +206,17 @@
       <p class="sub">Devnet only, no real money. In Phantom, turn on Settings → Developer Settings → Testnet Mode and select Devnet.
         Free devnet SOL: <a href="https://faucet.solana.com" target="_blank" rel="noopener">faucet.solana.com</a>.
         The connected wallet becomes the pool creator, partner, fee claimer and leftover receiver (devnet only).</p>
-      <button type="button" id="connect">Connect Phantom</button>
-      <button type="button" id="create" disabled>Create config + pool</button>
-      <button type="button" id="buy" disabled>Buy</button>
-      <button type="button" id="read" class="ghost" disabled>Pool state</button>
+      <p class="hint" id="wallet-hint">Connect a wallet (top right) to start</p>
+      <ol class="steps">
+        <li><button type="button" id="create" disabled>Create config + pool</button></li>
+        <li><button type="button" id="buy" disabled>Buy</button></li>
+        <li><button type="button" id="read" class="ghost" disabled>Pool state</button></li>
+      </ol>
       <pre id="devlog"></pre>
     </div>
   </section>
 </main>
+<footer><div class="wrap">Built by the PantheonX team</div></footer>
 <script src="./src/boot.js"></script>
 <script type="module" src="./dist/app.js"></script>
 </body>
