@@ -2,7 +2,7 @@
 
 Curve Lab is a single web page for designing a Meteora Dynamic Bonding Curve (DBC) config. It shows the graduation threshold, the anti-sniper fee decay and who earns what before you launch anything. You can then prove the config on devnet with Phantom and export it as JSON, a meteora-invent file or TypeScript.
 
-Live page: https://xelagate.github.io/curve-lab/ <!-- TODO: confirm live link after publish -->
+Live page: https://xelagate.github.io/curve-lab/ · Code: https://github.com/Xelagate/curve-lab
 
 ## Why
 
