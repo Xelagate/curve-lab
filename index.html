@@ -32,6 +32,8 @@
   .badges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .wallet { padding: 7px 16px; font-size: 13px; white-space: nowrap; }
   .wallet.on, .wallet.on:hover:not(:disabled) { background: var(--deep); border-color: var(--line); color: var(--head); font-family: var(--mono); font-size: 12px; }
+  .wallet .off, .wallet.on:hover .addr { display: none; } .wallet.on:hover .off { display: inline; }
+  .wallet.on:hover:not(:disabled) { border-color: var(--bad); }
   .wallet.on::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; margin-right: 8px; vertical-align: 1px; }
   .hint { margin: 14px 0 0; padding: 10px 14px; border-radius: 12px; border: 1px dashed var(--line); color: var(--head); font-size: 13px; font-weight: 600; }
   .badge { font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }

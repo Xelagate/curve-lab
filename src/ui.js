@@ -338,13 +338,23 @@ async function showPool() {
   if (p.isMigrated) log('Migrated to DAMM v2.')
 }
 
+// Connected: the header button shows the short address and disconnects on click.
+function setWallet(w) {
+  wallet = w; const btn = $('connect'), key = w?.publicKey.toBase58()
+  btn.classList.toggle('on', !!w); btn.title = w ? `${key}, click to disconnect` : ''
+  btn.innerHTML = w ? `<span class="addr">${key.slice(0, 4)}…${key.slice(-3)}</span><span class="off">Disconnect</span>` : 'Connect<span class="opt"> Wallet</span>'
+  syncActions()
+}
+const dropped = msg => () => { if (wallet) { setWallet(null); log(msg) } }
+window.phantom?.solana?.on?.('disconnect', dropped('Wallet disconnected in Phantom.'))
+window.phantom?.solana?.on?.('accountChanged', dropped('Account changed in Phantom. Connect again to use it.'))
+
 $('connect').onclick = busy(async () => {
   const provider = window.phantom?.solana
+  if (wallet) { setWallet(null); await provider?.disconnect(); return log('Disconnected.') }
   if (!provider?.isPhantom) return log(`Phantom not found: install it from ${a('phantom.com', 'https://phantom.com')} and reload.`)
-  wallet = await chain.phantomWallet(provider)
+  setWallet(await chain.phantomWallet(provider))
   log(`Connected ${a(wallet.publicKey.toBase58(), chain.accountLink(wallet.publicKey.toBase58()))}`)
-  const key = wallet.publicKey.toBase58(), btn = $('connect')
-  btn.textContent = `${key.slice(0, 4)}…${key.slice(-3)}`; btn.title = key; btn.classList.add('on')
 })
 $('create').onclick = busy(async () => {
   if (!last) return log('Fix the inputs first.')
