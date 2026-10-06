@@ -1,0 +1,17 @@
+{
+  "name": "curve-lab",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test 'test/*.test.mjs'",
+    "serve": "python3 -m http.server 8787 --bind 127.0.0.1",
+    "build": "esbuild src/ui.js --bundle --format=esm --platform=browser --minify --target=es2022 --define:global=globalThis --inject:scripts/buffer-shim.js --legal-comments=none --outfile=dist/app.js"
+  },
+  "devDependencies": {
+    "@meteora-ag/dynamic-bonding-curve-sdk": "1.5.13",
+    "@solana/web3.js": "1.99.0",
+    "bn.js": "5.2.5",
+    "buffer": "6.0.3",
+    "esbuild": "0.28.2"
+  }
+}

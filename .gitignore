@@ -1,0 +1,7 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.secrets/
+.DS_Store
+.superpowers/

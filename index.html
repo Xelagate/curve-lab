@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Curve Lab</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self' https://api.devnet.solana.com wss://api.devnet.solana.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'none'">
+<style>
+  :root { --bg: #fbfaf7; --fg: #1c1b19; --muted: #6b675f; --line: #dcd8cf; --accent: #6b3fd4; --bad: #b42318; --card: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #141312; --fg: #ece9e3; --muted: #a39e94; --line: #3a3732; --accent: #a98bff; --bad: #ff7a6b; --card: #1d1c1a; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.45 system-ui, sans-serif; }
+  header, main { max-width: 1180px; margin: 0 auto; padding: 16px; }
+  h1 { margin: 0; font-size: 22px; } h2 { font-size: 15px; margin: 0 0 8px; }
+  .sub { color: var(--muted); margin: 4px 0 0; }
+  main { display: grid; grid-template-columns: minmax(280px, 360px) 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  main > * { min-width: 0; }
+  fieldset { min-inline-size: 0; border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px 12px; background: var(--card); }
+  legend { font-weight: 600; padding: 0 4px; }
+  label { display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center; margin: 6px 0; font-size: 14px; }
+  [hidden] { display: none !important; }
+  #chart-curve, #chart-fee { overflow-x: auto; } #chart-curve svg, #chart-fee svg { min-width: 600px; }
+  label.wide { grid-template-columns: 1fr; }
+  input, select { width: 100%; padding: 4px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg); font: inherit; }
+  .err { color: var(--bad); font-size: 13px; grid-column: 1 / -1; }
+  .card { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; background: var(--card); }
+  .stale { opacity: .45; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; margin: 0; } dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+  svg { width: 100%; height: auto; display: block; } svg text { fill: var(--muted); font-size: 11px; }
+  svg .plot { fill: none; stroke: var(--accent); stroke-width: 2; } svg .axis { stroke: var(--line); }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; } td, th { padding: 4px 6px; border-bottom: 1px solid var(--line); text-align: right; } td:first-child, th:first-child { text-align: left; }
+  button { font: inherit; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; } button.ghost { background: none; color: var(--accent); }
+  #banner { display: none; background: var(--bad); color: #fff; padding: 10px 16px; }
+  #banner.show { display: block; }
+  pre { white-space: pre-wrap; word-break: break-all; font-size: 12px; max-height: 260px; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div id="banner">Could not load the app. <button id="retry" class="ghost" style="color:#fff;border-color:#fff">Retry</button></div>
+<header>
+  <h1>Curve Lab</h1>
+  <p class="sub">Design a Meteora Dynamic Bonding Curve config, see what it does before launch, prove it on devnet, export it.</p>
+</header>
+<main>
+  <form id="form" autocomplete="off"></form>
+  <section id="results">
+    <div class="card" id="summary"></div>
+    <div class="card"><h2>Market cap vs SOL raised</h2><div id="chart-curve"></div></div>
+    <div class="card"><h2>Trading fee over the first seconds</h2><div id="chart-fee"></div><p id="bot-human"></p></div>
+    <div class="card" id="revenue"></div>
+    <div class="card" id="export">
+      <h2>Export</h2>
+      <button type="button" data-export="json">Config JSON</button>
+      <button type="button" data-export="builder">Builder input</button>
+      <button type="button" data-export="invent">meteora-invent jsonc</button>
+      <button type="button" data-export="ts">TypeScript</button>
+      <button type="button" class="ghost" id="share">Copy share link</button>
+      <p><a id="download" hidden></a></p>
+      <pre id="export-out"></pre>
+    </div>
+    <div class="card" id="devnet">
+      <h2>Devnet test</h2>
+      <p class="sub">Devnet only, no real money. In Phantom, turn on Settings → Developer Settings → Testnet Mode and select Devnet.
+        Free devnet SOL: <a href="https://faucet.solana.com" target="_blank" rel="noopener">faucet.solana.com</a>.
+        The connected wallet becomes the pool creator, partner, fee claimer and leftover receiver (devnet only).</p>
+      <button type="button" id="connect">Connect Phantom</button>
+      <button type="button" id="create" disabled>Create config + pool</button>
+      <button type="button" id="buy" disabled>Buy</button>
+      <button type="button" id="read" class="ghost" disabled>Pool state</button>
+      <pre id="devlog"></pre>
+    </div>
+  </section>
+</main>
+<script src="./src/boot.js"></script>
+<script type="module" src="./dist/app.js"></script>
+</body>
+</html>
